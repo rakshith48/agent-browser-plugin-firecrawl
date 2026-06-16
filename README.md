@@ -17,7 +17,7 @@ A [agent-browser](https://github.com/vercel-labs/agent-browser) plugin that inte
 From GitHub (current):
 
 ```bash
-agent-browser plugin add rakshith48/agent-browser-plugin-firecrawl
+agent-browser plugin add firecrawl/agent-browser-plugin-firecrawl
 ```
 
 From npm (once published):
@@ -81,7 +81,7 @@ The `--payload` JSON is forwarded as the request body to the matching Firecrawl 
 }
 ```
 
-> When added from GitHub, `plugin add` instead writes `"command": "npx"` with `"args": ["-y", "github:rakshith48/agent-browser-plugin-firecrawl"]`. The npm-installed form above uses the global `bin`.
+> When added from GitHub, `plugin add` instead writes `"command": "npx"` with `"args": ["-y", "github:firecrawl/agent-browser-plugin-firecrawl"]`. The npm-installed form above uses the global `bin`.
 
 ### Environment variables
 
@@ -149,7 +149,7 @@ npm install -g agent-browser
 export FIRECRAWL_API_KEY=fc-...
 
 # 1. install + inspect the plugin
-agent-browser plugin add rakshith48/agent-browser-plugin-firecrawl
+agent-browser plugin add firecrawl/agent-browser-plugin-firecrawl
 agent-browser plugin list
 agent-browser plugin show firecrawl
 

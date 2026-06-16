@@ -29,12 +29,12 @@
     "web-scraping"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/rakshith48/agent-browser-plugin-firecrawl#readme",
+  "homepage": "https://github.com/firecrawl/agent-browser-plugin-firecrawl#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rakshith48/agent-browser-plugin-firecrawl.git"
+    "url": "git+https://github.com/firecrawl/agent-browser-plugin-firecrawl.git"
   },
   "bugs": {
-    "url": "https://github.com/rakshith48/agent-browser-plugin-firecrawl/issues"
+    "url": "https://github.com/firecrawl/agent-browser-plugin-firecrawl/issues"
   }
 }
