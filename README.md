@@ -3,7 +3,7 @@
 A [agent-browser](https://github.com/vercel-labs/agent-browser) plugin that integrates [Firecrawl](https://firecrawl.dev). It speaks the `agent-browser.plugin.v1` stdio protocol and exposes Firecrawl two ways:
 
 - **`browser.provider`** — launches a Firecrawl **cloud browser session** and returns its CDP WebSocket URL, so agent-browser drives Firecrawl's managed Chrome (proxies, anti-bot, persistent login profiles, live view). Firecrawl becomes a remote browser backend, peer to Browserbase/Browserless/Kernel.
-- **`command.run`** — calls Firecrawl's **scrape / search / crawl / map** endpoints directly, without launching a browser session.
+- **`command.run`** — calls Firecrawl's **scrape / search / crawl / map / parse** endpoints directly, without launching a browser session.
 
 ## Requirements
 
@@ -47,7 +47,7 @@ agent-browser close
 
 agent-browser asks the plugin for a session (`POST /v2/browser`), connects to the returned `cdpUrl`, and drives it with its full command surface. On `close` (or a failed connect) the plugin deletes the session (`DELETE /v2/browser/{id}`).
 
-### As scrape/search/crawl/map commands
+### As scrape/search/crawl/map/parse commands
 
 ```bash
 agent-browser plugin run firecrawl firecrawl.scrape --payload '{"url":"https://example.com","formats":["markdown"]}'
@@ -56,7 +56,15 @@ agent-browser plugin run firecrawl firecrawl.crawl  --payload '{"url":"https://d
 agent-browser plugin run firecrawl firecrawl.map    --payload '{"url":"https://example.com"}'
 ```
 
-The `--payload` JSON is forwarded as the request body to the matching Firecrawl `/v2` endpoint; the Firecrawl response is returned under `data`.
+For these, the `--payload` JSON is forwarded as the request body to the matching Firecrawl `/v2` endpoint; the response is returned under `data`.
+
+**Parse a local document** (`POST /v2/parse`, `multipart/form-data`). Pass a local `file` path (read from disk by the plugin) and optional scrape-style `options`:
+
+```bash
+agent-browser plugin run firecrawl firecrawl.parse --payload '{"file":"./report.pdf","options":{"formats":["markdown"]}}'
+```
+
+Use `parse` for local or non-public files (PDF, DOCX, XLSX, HTML, …); for a public document URL, prefer `firecrawl.scrape`.
 
 ## Configuration
 
@@ -74,7 +82,8 @@ The `--payload` JSON is forwarded as the request body to the matching Firecrawl 
         "firecrawl.scrape",
         "firecrawl.search",
         "firecrawl.crawl",
-        "firecrawl.map"
+        "firecrawl.map",
+        "firecrawl.parse"
       ]
     }
   ]

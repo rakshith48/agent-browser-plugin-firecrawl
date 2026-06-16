@@ -65,6 +65,7 @@ const CAPABILITIES = [
   "firecrawl.search",
   "firecrawl.crawl",
   "firecrawl.map",
+  "firecrawl.parse",
 ];
 
 // command.run request type -> Firecrawl endpoint
@@ -101,15 +102,18 @@ async function api(method, path, body) {
   const controller = new AbortController();
   const timeoutMs = Number(process.env.FIRECRAWL_HTTP_TIMEOUT_MS) || 60000;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // FormData bodies (e.g. /v2/parse uploads) must keep fetch's auto-generated
+  // multipart Content-Type/boundary — only set JSON content-type otherwise.
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   let res;
   try {
     res = await fetch(`${apiBase}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
       signal: controller.signal,
     });
   } catch (err) {
@@ -171,7 +175,7 @@ async function handle(input) {
         name: "firecrawl",
         capabilities: CAPABILITIES,
         description:
-          "Firecrawl cloud browser provider (CDP) plus scrape/search/crawl/map commands",
+          "Firecrawl cloud browser provider (CDP) plus scrape/search/crawl/map/parse commands",
       },
     });
   }
@@ -202,6 +206,23 @@ async function handle(input) {
     const id = r.sessionId || r.id;
     if (id) await api("DELETE", `/v2/browser/${encodeURIComponent(id)}`);
     return ok({});
+  }
+
+  // --- command.run: parse a local document (multipart upload) ---
+  if (type === "firecrawl.parse") {
+    const r = input.request && typeof input.request === "object" ? input.request : {};
+    const filePath = r.file || r.path;
+    if (!filePath) throw new Error("firecrawl.parse requires a 'file' path");
+    const bytes = await fs.promises.readFile(filePath);
+    const form = new FormData();
+    form.append("file", new Blob([bytes]), nodePath.basename(filePath));
+    // `options` must be a plain text field, not a file part, or the server's
+    // multipart parser rejects it ("Unexpected field").
+    if (r.options != null) {
+      form.append("options", JSON.stringify(r.options));
+    }
+    const data = await api("POST", "/v2/parse", form);
+    return ok({ data });
   }
 
   // --- command.run (scrape/search/crawl/map) ---

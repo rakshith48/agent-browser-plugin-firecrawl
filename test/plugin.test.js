@@ -42,14 +42,27 @@ before(async () => {
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
+      const contentType = req.headers["content-type"] || "";
+      let parsed = null;
+      if (contentType.includes("application/json") && body) {
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          /* leave null */
+        }
+      }
       lastReq = {
         method: req.method,
         url: req.url,
         auth: req.headers["authorization"],
-        body: body ? JSON.parse(body) : null,
+        contentType,
+        rawBody: body,
+        body: parsed,
       };
       res.setHeader("content-type", "application/json");
-      if (req.method === "POST" && req.url === "/v2/browser") {
+      if (req.method === "POST" && req.url === "/v2/parse") {
+        res.end(JSON.stringify({ success: true, data: { markdown: "# Parsed" } }));
+      } else if (req.method === "POST" && req.url === "/v2/browser") {
         // ttl 999 simulates a malformed response (cdpUrl but no id)
         const noId = lastReq.body && lastReq.body.ttl === 999;
         res.end(
@@ -252,4 +265,33 @@ test("firecrawl.scrape forwards payload and returns data", async () => {
   assert.equal(json.data.data.markdown, "# Mock");
   assert.equal(lastReq.url, "/v2/scrape");
   assert.equal(lastReq.body.url, "https://example.com");
+});
+
+test("firecrawl.parse uploads a local file as multipart with options", async () => {
+  const file = path.join(emptyHome, "doc.html");
+  fs.writeFileSync(file, "<h1>HELLO_PARSE</h1>");
+  const { json } = await run(
+    {
+      protocol: PROTOCOL,
+      type: "firecrawl.parse",
+      request: { file, options: { formats: ["markdown"] } },
+    },
+    env()
+  );
+  assert.equal(json.success, true);
+  assert.equal(json.data.data.markdown, "# Parsed");
+  assert.equal(lastReq.url, "/v2/parse");
+  assert.match(lastReq.contentType, /multipart\/form-data/);
+  // the file bytes and options rode along in the multipart body
+  assert.match(lastReq.rawBody, /HELLO_PARSE/);
+  assert.match(lastReq.rawBody, /markdown/);
+});
+
+test("firecrawl.parse without a file path fails clearly", async () => {
+  const { json } = await run(
+    { protocol: PROTOCOL, type: "firecrawl.parse", request: { options: {} } },
+    env()
+  );
+  assert.equal(json.success, false);
+  assert.match(json.error, /requires a 'file'/);
 });
