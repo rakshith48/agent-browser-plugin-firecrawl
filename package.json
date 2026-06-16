@@ -1,0 +1,39 @@
+{
+  "name": "agent-browser-plugin-firecrawl",
+  "version": "0.1.0",
+  "description": "Firecrawl plugin for agent-browser: cloud browser provider (CDP) plus scrape/search/crawl/map commands",
+  "type": "commonjs",
+  "bin": {
+    "agent-browser-plugin-firecrawl": "./bin/plugin.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "manifest": "echo '{\"protocol\":\"agent-browser.plugin.v1\",\"type\":\"plugin.manifest\",\"capability\":\"plugin.manifest\",\"request\":{}}' | node bin/plugin.js"
+  },
+  "keywords": [
+    "agent-browser",
+    "agent-browser-plugin",
+    "firecrawl",
+    "browser-automation",
+    "browser-provider",
+    "cdp",
+    "scraping",
+    "web-scraping"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/rakshith48/agent-browser-plugin-firecrawl#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rakshith48/agent-browser-plugin-firecrawl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rakshith48/agent-browser-plugin-firecrawl/issues"
+  }
+}
