@@ -94,11 +94,21 @@ The plugin reuses Firecrawl's standard env vars — the **same ones the Firecraw
 | `FIRECRAWL_PROFILE_NAME` | no | — | Persistent browser profile to load (cookies/localStorage/login state). |
 | `FIRECRAWL_PROFILE_SAVE_CHANGES` | no | `true` | Save browser state back to the profile on close. Set `false`/`0` for read-only. |
 
-\* Not required when `FIRECRAWL_API_URL` points at a self-hosted instance.
+\* Not required if you've run `firecrawl login` (see below) or are pointing `FIRECRAWL_API_URL` at a self-hosted instance.
+
+### Credential resolution
+
+The plugin resolves its Firecrawl API key in this order:
+
+1. **`FIRECRAWL_API_KEY` env var** (and `FIRECRAWL_API_URL`) — explicit, always wins.
+2. **`firecrawl login` session** — if you've authenticated with the [Firecrawl CLI](https://github.com/firecrawl/cli) (browser or API key), the plugin reads the key it stored in `credentials.json` (`~/Library/Application Support/firecrawl-cli` on macOS, `~/.config/firecrawl-cli` on Linux, `%AppData%/firecrawl-cli` on Windows). No env var needed.
+3. Otherwise it returns a clear error: *set `FIRECRAWL_API_KEY` or run `firecrawl login`*.
+
+One key serves both the browser provider and the scrape/search/crawl/map commands.
 
 ### Two auth layers
 
-- **API auth (plugin → Firecrawl):** the `FIRECRAWL_API_KEY` env var — same convention as the built-in Browserbase/Browserless/Kernel providers.
+- **API auth (plugin → Firecrawl):** `FIRECRAWL_API_KEY` env var, or a reused `firecrawl login` session (see above) — same env-var convention as the built-in Browserbase/Browserless/Kernel providers.
 - **Browser auth (session → target site):** Firecrawl **persistent profiles**. Set `FIRECRAWL_PROFILE_NAME` (or pass `profile` in the launch request) to log in once and reuse the session:
 
   ```bash

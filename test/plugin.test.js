@@ -10,15 +10,34 @@ const assert = require("node:assert");
 const { spawn } = require("node:child_process");
 const http = require("node:http");
 const path = require("node:path");
+const fs = require("node:fs");
+const os = require("node:os");
 
 const BIN = path.join(__dirname, "..", "bin", "plugin.js");
 const PROTOCOL = "agent-browser.plugin.v1";
 
+// Mirror the plugin's per-OS credential dir so we can plant a fake credentials.json.
+function cliConfigDirFor(home) {
+  switch (process.platform) {
+    case "darwin":
+      return path.join(home, "Library", "Application Support", "firecrawl-cli");
+    case "win32":
+      return path.join(home, "AppData", "Roaming", "firecrawl-cli");
+    default:
+      return path.join(home, ".config", "firecrawl-cli");
+  }
+}
+
 let server;
 let baseUrl;
 let lastReq;
+let emptyHome; // HOME with no stored creds
+let credsHome; // HOME containing a firecrawl-cli credentials.json
 
 before(async () => {
+  // Isolated HOMEs so tests never read the dev machine's real ~/.../credentials.json
+  emptyHome = fs.mkdtempSync(path.join(os.tmpdir(), "ab-empty-"));
+  credsHome = fs.mkdtempSync(path.join(os.tmpdir(), "ab-creds-"));
   server = http.createServer((req, res) => {
     let body = "";
     req.on("data", (c) => (body += c));
@@ -53,9 +72,21 @@ before(async () => {
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  // Plant a CLI credentials.json (apiUrl -> mock) in credsHome.
+  const dir = cliConfigDirFor(credsHome);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "credentials.json"),
+    JSON.stringify({ apiKey: "fc-stored", apiUrl: baseUrl })
+  );
 });
 
-after(() => server.close());
+after(() => {
+  server.close();
+  fs.rmSync(emptyHome, { recursive: true, force: true });
+  fs.rmSync(credsHome, { recursive: true, force: true });
+});
 
 // Spawn the bin with a clean env (no inherited FIRECRAWL_* unless overridden).
 function run(envelope, extraEnv = {}) {
@@ -68,6 +99,9 @@ function run(envelope, extraEnv = {}) {
   ]) {
     delete env[k];
   }
+  // Default to a creds-free HOME; a test can override via extraEnv.HOME.
+  env.HOME = emptyHome;
+  env.USERPROFILE = emptyHome;
   Object.assign(env, extraEnv);
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [BIN], { env });
@@ -170,6 +204,27 @@ test("browser.launch fails if Firecrawl returns no session id", async () => {
   );
   assert.equal(json.success, false);
   assert.match(json.error, /session id/);
+});
+
+// --- credential resolution (env -> CLI credentials.json -> error) ---
+
+test("falls back to firecrawl-cli credentials.json when no env key", async () => {
+  // no FIRECRAWL_API_KEY/URL; HOME points at the planted credentials.json
+  const { json } = await run(
+    { protocol: PROTOCOL, type: "browser.launch", request: { launchOptions: {} } },
+    { HOME: credsHome, USERPROFILE: credsHome }
+  );
+  assert.equal(json.success, true);
+  assert.equal(lastReq.auth, "Bearer fc-stored"); // key came from the file
+});
+
+test("env FIRECRAWL_API_KEY overrides stored CLI credentials", async () => {
+  const { json } = await run(
+    { protocol: PROTOCOL, type: "browser.launch", request: { launchOptions: {} } },
+    { HOME: credsHome, USERPROFILE: credsHome, FIRECRAWL_API_KEY: "fc-env", FIRECRAWL_API_URL: baseUrl }
+  );
+  assert.equal(json.success, true);
+  assert.equal(lastReq.auth, "Bearer fc-env"); // env wins over the file
 });
 
 test("browser.close issues DELETE for the session id", async () => {

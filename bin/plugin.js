@@ -18,9 +18,45 @@
  * one JSON response to stdout, and exit 0. Nothing else may go to stdout.
  */
 
+const fs = require("node:fs");
+const os = require("node:os");
+const nodePath = require("node:path");
+
 const PROTOCOL = "agent-browser.plugin.v1";
-const API_BASE = (process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev").replace(/\/+$/, "");
-const API_KEY = process.env.FIRECRAWL_API_KEY || "";
+const DEFAULT_API_BASE = "https://api.firecrawl.dev";
+
+// Location where firecrawl-cli stores credentials after `firecrawl login`
+// (mirrors cli/src/utils/credentials.ts). Lets a logged-in user skip the env var.
+function cliConfigDir() {
+  const home = os.homedir();
+  switch (os.platform()) {
+    case "darwin":
+      return nodePath.join(home, "Library", "Application Support", "firecrawl-cli");
+    case "win32":
+      return nodePath.join(home, "AppData", "Roaming", "firecrawl-cli");
+    default:
+      return nodePath.join(home, ".config", "firecrawl-cli");
+  }
+}
+
+function loadCliCredentials() {
+  try {
+    const raw = fs.readFileSync(nodePath.join(cliConfigDir(), "credentials.json"), "utf8");
+    const c = JSON.parse(raw);
+    return c && typeof c === "object" ? c : null;
+  } catch {
+    return null; // missing/unreadable/corrupt -> no stored creds
+  }
+}
+
+// Resolve credentials: explicit env wins, then fall back to the `firecrawl login`
+// session stored by the CLI. Same key serves browser.provider and command.run.
+function resolveCredentials() {
+  const stored = loadCliCredentials() || {};
+  const apiKey = process.env.FIRECRAWL_API_KEY || stored.apiKey || "";
+  const apiUrl = process.env.FIRECRAWL_API_URL || stored.apiUrl || DEFAULT_API_BASE;
+  return { apiKey, apiBase: String(apiUrl).replace(/\/+$/, "") };
+}
 
 const CAPABILITIES = [
   "browser.provider",
@@ -56,7 +92,10 @@ async function readStdin() {
 }
 
 async function api(method, path, body) {
-  if (!API_KEY) throw new Error("FIRECRAWL_API_KEY is not set");
+  const { apiKey, apiBase } = resolveCredentials();
+  if (!apiKey) {
+    throw new Error("No Firecrawl credentials: set FIRECRAWL_API_KEY or run `firecrawl login`");
+  }
   // Bound the request so a stalled call can't block the plugin from emitting
   // its single response. Overridable via FIRECRAWL_HTTP_TIMEOUT_MS.
   const controller = new AbortController();
@@ -64,10 +103,10 @@ async function api(method, path, body) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(`${apiBase}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
