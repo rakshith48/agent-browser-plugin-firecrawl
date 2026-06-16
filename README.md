@@ -81,6 +81,8 @@ The `--payload` JSON is forwarded as the request body to the matching Firecrawl 
 }
 ```
 
+> When added from GitHub, `plugin add` instead writes `"command": "npx"` with `"args": ["-y", "github:rakshith48/agent-browser-plugin-firecrawl"]`. The npm-installed form above uses the global `bin`.
+
 ### Environment variables
 
 The plugin reuses Firecrawl's standard env vars — the **same ones the Firecrawl CLI and SDK use** — so if Firecrawl is already set up in your shell, the plugin works with no extra config.
@@ -121,21 +123,61 @@ Each capability is a policy action `plugin:firecrawl:<capability>`:
 agent-browser --confirm-actions plugin:firecrawl:browser.provider --provider firecrawl open https://example.com
 ```
 
-## Develop / test
+## Develop & test
 
-The manifest path needs no API key or network:
+### Unit tests (no API key, no network)
+
+Hermetic tests spawn the bin and mock the Firecrawl API on localhost — they cover the protocol paths and the `browser.launch` request mapping:
 
 ```bash
-npm run manifest
-# {"protocol":"agent-browser.plugin.v1","success":true,"manifest":{...}}
+npm test          # node --test
 ```
 
-Drive any request type by piping a request envelope to the bin:
+Quick manual checks:
 
 ```bash
+npm run manifest  # prints the plugin manifest
 echo '{"protocol":"agent-browser.plugin.v1","type":"firecrawl.scrape","capability":"command.run","request":{"url":"https://example.com","formats":["markdown"]}}' \
   | FIRECRAWL_API_KEY=fc-... node bin/plugin.js
 ```
+
+### End-to-end (real Firecrawl + agent-browser)
+
+```bash
+# 0. prerequisites
+npm install -g agent-browser
+export FIRECRAWL_API_KEY=fc-...
+
+# 1. install + inspect the plugin
+agent-browser plugin add rakshith48/agent-browser-plugin-firecrawl
+agent-browser plugin list
+agent-browser plugin show firecrawl
+
+# 2. browser.provider — drive Firecrawl's cloud browser
+agent-browser --provider firecrawl open https://example.com
+agent-browser get title
+agent-browser snapshot -i          # note the @e refs, then click one
+agent-browser click @e2
+agent-browser get url              # should have navigated
+agent-browser close
+
+# 3. command.run — scrape / search / crawl / map
+agent-browser plugin run firecrawl firecrawl.scrape --payload '{"url":"https://example.com","formats":["markdown"]}'
+agent-browser plugin run firecrawl firecrawl.search --payload '{"query":"firecrawl","limit":3}'
+
+# 4. persistent profile — log in once, reuse
+FIRECRAWL_PROFILE_NAME=my-app agent-browser --provider firecrawl open https://app.example.com/login
+# ...drive the login with snapshot/click/fill, then close to save state...
+agent-browser close
+FIRECRAWL_PROFILE_NAME=my-app FIRECRAWL_PROFILE_SAVE_CHANGES=false \
+  agent-browser --provider firecrawl open https://app.example.com/dashboard
+agent-browser close
+
+# 5. confirm no sessions leaked
+curl -s "https://api.firecrawl.dev/v2/browser?status=active" -H "Authorization: Bearer $FIRECRAWL_API_KEY"
+```
+
+> `snapshot` refs (`@e1`, `@e2`, …) are assigned per snapshot — always take a fresh snapshot in the current session before clicking a ref.
 
 ## License
 

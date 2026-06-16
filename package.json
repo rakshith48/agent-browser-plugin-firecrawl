@@ -15,6 +15,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "test": "node --test",
     "manifest": "echo '{\"protocol\":\"agent-browser.plugin.v1\",\"type\":\"plugin.manifest\",\"capability\":\"plugin.manifest\",\"request\":{}}' | node bin/plugin.js"
   },
   "keywords": [
