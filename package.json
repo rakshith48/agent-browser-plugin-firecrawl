@@ -4,7 +4,7 @@
   "description": "Firecrawl plugin for agent-browser: cloud browser provider (CDP) plus scrape/search/crawl/map commands",
   "type": "commonjs",
   "bin": {
-    "agent-browser-plugin-firecrawl": "./bin/plugin.js"
+    "agent-browser-plugin-firecrawl": "bin/plugin.js"
   },
   "files": [
     "bin",
@@ -16,7 +16,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "manifest": "echo '{\"protocol\":\"agent-browser.plugin.v1\",\"type\":\"plugin.manifest\",\"capability\":\"plugin.manifest\",\"request\":{}}' | node bin/plugin.js"
+    "manifest": "echo '{\"protocol\":\"agent-browser.plugin.v1\",\"type\":\"plugin.manifest\",\"capability\":\"plugin.manifest\",\"request\":{}}' | node bin/plugin.js",
+    "prepublishOnly": "node --test"
   },
   "keywords": [
     "agent-browser",

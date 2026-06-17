@@ -1,0 +1,30 @@
+name: Publish to npm
+
+# Publishes the package to npm using the NPM_TOKEN repo secret.
+# Triggers:
+#   - when a GitHub Release is published (tag = the version being released), or
+#   - manually via the Actions tab (workflow_dispatch).
+# Tests run via the `prepublishOnly` script before `npm publish` proceeds.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
