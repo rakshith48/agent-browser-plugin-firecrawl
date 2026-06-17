@@ -45,7 +45,7 @@ agent-browser click @e2
 agent-browser close
 ```
 
-agent-browser asks the plugin for a session (`POST /v2/browser`), connects to the returned `cdpUrl`, and drives it with its full command surface. On `close` (or a failed connect) the plugin deletes the session (`DELETE /v2/browser/{id}`).
+agent-browser asks the plugin for a session (`POST /v2/interact`), connects to the returned `cdpUrl`, and drives it with its full command surface. On `close` (or a failed connect) the plugin deletes the session (`DELETE /v2/interact/{id}`).
 
 ### As scrape/search/crawl/map/parse commands
 
@@ -132,7 +132,7 @@ One key serves both the browser provider and the scrape/search/crawl/map command
 
 ### Browser session options
 
-The `browser.launch` request forwards these fields (when present) to `POST /v2/browser`: `ttl`, `activityTtl`, `streamWebView`, and `profile` (`{ name, saveChanges }`). If the request has no `profile`, the `FIRECRAWL_PROFILE_NAME` env var is used.
+The `browser.launch` request forwards these fields (when present) to `POST /v2/interact`: `ttl`, `activityTtl`, `streamWebView`, and `profile` (`{ name, saveChanges }`). If the request has no `profile`, the `FIRECRAWL_PROFILE_NAME` env var is used.
 
 ## Policy gating
 
@@ -193,7 +193,7 @@ FIRECRAWL_PROFILE_NAME=my-app FIRECRAWL_PROFILE_SAVE_CHANGES=false \
 agent-browser close
 
 # 5. confirm no sessions leaked
-curl -s "https://api.firecrawl.dev/v2/browser?status=active" -H "Authorization: Bearer $FIRECRAWL_API_KEY"
+curl -s "https://api.firecrawl.dev/v2/interact?status=active" -H "Authorization: Bearer $FIRECRAWL_API_KEY"
 ```
 
 > `snapshot` refs (`@e1`, `@e2`, …) are assigned per snapshot — always take a fresh snapshot in the current session before clicking a ref.

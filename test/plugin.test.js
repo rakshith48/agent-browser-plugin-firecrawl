@@ -62,7 +62,7 @@ before(async () => {
       res.setHeader("content-type", "application/json");
       if (req.method === "POST" && req.url === "/v2/parse") {
         res.end(JSON.stringify({ success: true, data: { markdown: "# Parsed" } }));
-      } else if (req.method === "POST" && req.url === "/v2/browser") {
+      } else if (req.method === "POST" && req.url === "/v2/interact") {
         // ttl 999 simulates a malformed response (cdpUrl but no id)
         const noId = lastReq.body && lastReq.body.ttl === 999;
         res.end(
@@ -73,7 +73,7 @@ before(async () => {
             liveViewUrl: "https://mock.firecrawl.dev/live",
           })
         );
-      } else if (req.method === "DELETE" && req.url.startsWith("/v2/browser/")) {
+      } else if (req.method === "DELETE" && req.url.startsWith("/v2/interact/")) {
         res.end(JSON.stringify({ success: true }));
       } else if (req.method === "POST" && req.url === "/v2/scrape") {
         res.end(JSON.stringify({ success: true, data: { markdown: "# Mock" } }));
@@ -185,7 +185,7 @@ test("browser.launch reads ttl nested under launchOptions and returns cdpUrl", a
   assert.deepEqual(json.browser.cleanup, { sessionId: "sess-123" });
   // the outgoing request body picked up the nested ttl
   assert.equal(lastReq.method, "POST");
-  assert.equal(lastReq.url, "/v2/browser");
+  assert.equal(lastReq.url, "/v2/interact");
   assert.equal(lastReq.body.ttl, 120);
   assert.equal(lastReq.auth, "Bearer fc-test");
 });
@@ -247,7 +247,7 @@ test("browser.close issues DELETE for the session id", async () => {
   );
   assert.equal(json.success, true);
   assert.equal(lastReq.method, "DELETE");
-  assert.equal(lastReq.url, "/v2/browser/sess-123");
+  assert.equal(lastReq.url, "/v2/interact/sess-123");
 });
 
 // --- command.run ---

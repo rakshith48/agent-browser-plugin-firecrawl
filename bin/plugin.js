@@ -138,7 +138,7 @@ async function api(method, path, body) {
   return json;
 }
 
-// Forward only the session fields Firecrawl's POST /v2/browser understands.
+// Forward only the session fields Firecrawl's POST /v2/interact understands.
 // agent-browser sends `{ provider, session, launchOptions: {...} }`, so known
 // Firecrawl params may arrive nested under launchOptions (or top-level when the
 // plugin is driven directly). Merge both, launchOptions taking precedence.
@@ -182,7 +182,7 @@ async function handle(input) {
 
   // --- browser.provider ---
   if (type === "browser.launch") {
-    const session = await api("POST", "/v2/browser", browserCreateBody(input.request));
+    const session = await api("POST", "/v2/interact", browserCreateBody(input.request));
     if (!session.cdpUrl) throw new Error("Firecrawl did not return a cdpUrl");
     if (!session.id) throw new Error("Firecrawl did not return a session id");
     return ok({
@@ -204,7 +204,7 @@ async function handle(input) {
   if (type === "browser.close") {
     const r = input.request && typeof input.request === "object" ? input.request : {};
     const id = r.sessionId || r.id;
-    if (id) await api("DELETE", `/v2/browser/${encodeURIComponent(id)}`);
+    if (id) await api("DELETE", `/v2/interact/${encodeURIComponent(id)}`);
     return ok({});
   }
 
